@@ -1,94 +1,150 @@
 import os
 from docx import Document
 
+
 def main():
-    funktionauswahl = input("Gebe ein Welche Funktion des Programm du benutzen möchtest, \"1\" für ein Einzelnes Dokument: ")
-    if funktionauswahl == "1":
-        getsingledocument()
-    elif funktionauswahl == "2":
-        getmultpledocument()
-    else:
-        print("Gebe nur die Zahl 1 oder 2 ein")
-        main()
+    while True:
+        funktionauswahl = input(
+            'Gebe ein, welche Funktion des Programms du benutzen möchtest: "1" für ein einzelnes Dokument oder "2" für mehrere oder "3" um Dokumente von .doc in docx zu ändern: '
+        )
+        if funktionauswahl == "1":
+            getsingledocument()
+            break
+        elif funktionauswahl == "2":
+            getmultpledocument()
+            break
+        elif funktionauswahl == "3":
+            docconverter()
+        else:
+            print("Ungültige Eingabe. Gebe nur die Zahl 1 oder 2 ein.")
+
+def generate_unique_name(pfad, newname):
+    base, extension = os.path.splitext(newname)  # Trennt den Namen und die Erweiterung
+    counter = 1
+    unique_name = newname
+    while os.path.exists(os.path.join(pfad, unique_name)):
+        unique_name = f"{base}_{counter}{extension}"  # Fügt einen Zähler hinzu
+        counter += 1
+    return unique_name
 
 def getsingledocument():
     while True:
-        global pfad
-        pfad = input("geben sie den Dateipfad an wo sich die Datei befindet: ")
-        global dokument
-        dokument = input("Gebe den vollen Dateinamen ein des Dokumentes: ")
+        pfad = input("Geben Sie den Dateipfad an, wo sich die Datei befindet: ")
+        dokument = input("Geben Sie den vollen Dateinamen des Dokuments ein: ")
         if not pfad.endswith("\\"):
             pfad += "\\"
         if not dokument.endswith(".docx"):
             dokument += ".docx"
-        global docpfad
         docpfad = pfad + dokument
 
         if os.path.exists(docpfad):
-            print(f"Die Datei {docpfad} existiert")
+            print(f"Die Datei {docpfad} existiert.")
+            renamedata(docpfad, pfad)
             break
         else:
-            print(f"Der Angegebene Pfad: {pfad} oder die Datei {dokument} existiert nicht, gebe beides neu ein!")
-    renamedata()
+            print(
+                f"Der angegebene Pfad: {pfad} oder die Datei {dokument} existiert nicht. Geben Sie beides neu ein!"
+            )
+
 
 def getmultpledocument():
     while True:
-        global pfad
-        pfad = input("Gebe den Ordnerpfad an wo alle Dateien umbenannt werden sollen: ")
+        pfad = input("Geben Sie den Ordnerpfad an, wo alle Dateien umbenannt werden sollen: ")
         if not pfad.endswith("\\"):
             pfad += "\\"
-            break
         if os.path.exists(pfad):
+            dateien = finddocx(pfad)
+            renamemultipledata(dateien, pfad)
             break
+        if not os.path.exists(pfad):
+            print(f"Der Pfad {pfad} existiert nicht. Bitte erneut eingeben.")
+            continue
         else:
-            print(f"der angegebene Pfad \"{pfad}\" existiert nicht, gebe ihn neu ein")
-    finddocx(pfad)
+            print(f"Der angegebene Pfad \"{pfad}\" existiert nicht. Geben Sie ihn neu ein.")
+
 
 def finddocx(pfad):
-    print("test")
-    global dateien
     dateien = []
     for root, _, dateinamen in os.walk(pfad):
         for datei in dateinamen:
-            if datei.endswith('.docx'):
+            if datei.endswith(".docx"):
                 dateien.append(os.path.join(root, datei))
     return dateien
 
+def syntax_file_name(newname):
+    newname = newname.replace(" ", "_")
+    newname = newname.replace(":", "_")
+    newname = newname.replace("/", "_")
+    newname = newname.replace("\\", "_")
+    newname = newname.replace("*", "_")
+    newname = newname.replace("?", "_")
+    newname = newname.replace("\"", "_")
+    newname = newname.replace("<", "_")
+    newname = newname.replace(">", "_")
+    newname = newname.replace("|", "_")
+    return newname
 
-def renamedata():
+
+def renamemultipledata(dateien, pfad):
+    for file_path in dateien:
+        try:
+            doc = Document(file_path)
+        except Exception as e:
+            print(f"Die Datei {file_path} konnte nicht geöffnet werden. Fehler: {e}")
+            continue
+        doc = Document(file_path)
+        first = doc.paragraphs[0].text
+        first_extract = first.split()[:3]
+        newname = "_".join(first_extract) + ".docx"
+        newname = syntax_file_name(newname)
+        newname = generate_unique_name(pfad, newname)
+        newpath = os.path.join(pfad, newname)
+
+        print(f"\nAktuelle Datei: {file_path}")
+        print(f"Vorgeschlagener Name: {newname}")
+
+        while True:
+            #weitermachen = input(
+            #    'Möchten Sie diese Datei umbenennen? Geben Sie "ja" oder "nein" ein: '
+            #).lower()
+            weitermachen = "ja"
+            if weitermachen == "ja":
+                try:
+                    os.rename(file_path, newpath)
+                    print(f"Umbenennung war erfolgreich. Die Datei heißt nun: {newname}")
+                except Exception as e:
+                    print(f"Umbenennung war nicht erfolgreich. Fehler: {e}")
+                    continue
+                break
+            elif weitermachen == "nein":
+                print("Die Datei wurde übersprungen und bleibt unverändert.")
+                break
+            else:
+                print('Ungültige Eingabe. Geben Sie nur "ja" oder "nein" ein.')
+
+
+def renamedata(docpfad, pfad):
     doc = Document(docpfad)
-    print("Die Ersten 3 Wörter/Überschrifft sind:")
     first = doc.paragraphs[0].text
     first_extract = first.split()[:3]
-    print(first_extract)
+    print(f"Die ersten 3 Wörter/Überschrift des Dokuments sind: {first_extract}")
 
     while True:
-        weitermachen = input("wenn du fortfahren möchtest gebe \"ja\" ein, wenn nicht dann ein \"nein\": ").lower()
+        weitermachen = input(
+            'Wenn Sie fortfahren möchten, geben Sie "ja" ein, wenn nicht, "nein": '
+        ).lower()
         if weitermachen == "ja":
-            print("Unbennennung wird gestartet")
             newname = "_".join(first_extract) + ".docx"
-            newpath = pfad + newname
+            newpath = os.path.join(pfad, newname)
             os.rename(docpfad, newpath)
-            print("Unbennenung war erfolgreich")
+            print(f"Umbenennung war erfolgreich. Die Datei heißt nun: {newname}")
             break
         elif weitermachen == "nein":
-            print("Programm wird abgebrochen")
+            print("Umbenennung wurde abgebrochen.")
             break
         else:
-            print("Ungültige Eingabe, gebe nur \"ja\" oder \"nein\"")
-    getsingledocument2()
+            print('Ungültige Eingabe. Geben Sie nur "ja" oder "nein" ein.')
 
-def getsingledocument2():    
-    while True:
-        weitermachen2 = input('Möchtest du das noch eine andere Datei umbennant wird, gebe "ja" oder "nein" ein.').lower()
-        if weitermachen2 == "ja":
-            print("Das Programm wird fortgeführt!")
-            getsingledocument()
-        elif weitermachen2 == "nein":
-            print("Danke fürs benutzen.")
-            exit()  
-        else:
-            print("Ungültige Eingabe, gebe nur \"ja\" oder \"nein\"")
 
 if __name__ == "__main__":
     main()
