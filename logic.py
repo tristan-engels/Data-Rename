@@ -1,4 +1,5 @@
 import os
+import win32com.client
 from docx import Document
 
 
@@ -18,12 +19,62 @@ def main():
         else:
             print("Ungültige Eingabe. Gebe nur die Zahl 1 oder 2 ein.")
 
+def docconverter():
+    word = win32com.client.Dispatch("Word.3Application")
+    word.Visible = False
+
+    einodermehr = input("Möchtest du ein einzelnes Dokument oder mehrere Dokumente konvertieren? (ein/mehr): ").lower()
+    
+    if einodermehr == "ein":
+        while True:
+            pfad = input("Geben Sie den Dateipfad an, wo sich die Datei befindet: ").strip()
+            dokument = input("Geben Sie den vollen Dateinamen des Dokuments ein: ").strip()
+            
+            if not pfad.endswith("\\"):
+                pfad += "\\"
+            if not dokument.endswith(".doc"):
+                dokument += ".doc"
+            docpfad = os.path.join(pfad, dokument)
+
+            if not os.path.exists(docpfad):
+                print(f"Die Datei {docpfad} existiert nicht. Bitte geben Sie den Pfad erneut ein.")
+                continue
+            
+            try:
+                print(f"Verarbeite: {docpfad}")
+                doc = word.Documents.Open(docpfad)
+                docxpfad = os.path.splitext(docpfad)[0] + ".docx"  
+                doc.SaveAs(docxpfad, FileFormat=16)  
+                doc.Close()
+                print(f"Die Datei wurde erfolgreich konvertiert: {docxpfad}")
+                break  
+            except Exception as e:
+                print(f"Fehler beim Konvertieren der Datei: {e}")
+                continue
+            
+
+    elif einodermehr == "mehr":
+        while True:
+            pfad = input("Geben Sie den Ordnerpfad an, wo alle Dateien konvertiert werden sollen: ")
+            if not pfad.endswith("\\"):
+                pfad += "\\"
+            if os.path.exists(pfad):
+                dateien = finddoc(pfad)
+                for file_path in dateien:
+                    convert_doc_to_docx(file_path, pfad, word)
+                break
+            if not os.path.exists(pfad):
+                print(f"Der Pfad {pfad} existiert nicht. Bitte erneut eingeben.")
+                continue
+            else:
+                print(f"Der angegebene Pfad \"{pfad}\" existiert nicht. Geben Sie ihn neu ein.")
+
 def generate_unique_name(pfad, newname):
-    base, extension = os.path.splitext(newname)  # Trennt den Namen und die Erweiterung
+    base, extension = os.path.splitext(newname)  
     counter = 1
     unique_name = newname
     while os.path.exists(os.path.join(pfad, unique_name)):
-        unique_name = f"{base}_{counter}{extension}"  # Fügt einen Zähler hinzu
+        unique_name = f"{base}_{counter}{extension}"  
         counter += 1
     return unique_name
 
@@ -104,10 +155,9 @@ def renamemultipledata(dateien, pfad):
         print(f"Vorgeschlagener Name: {newname}")
 
         while True:
-            #weitermachen = input(
-            #    'Möchten Sie diese Datei umbenennen? Geben Sie "ja" oder "nein" ein: '
-            #).lower()
-            weitermachen = "ja"
+            weitermachen = input(
+                'Möchten Sie diese Datei umbenennen? Geben Sie "ja" oder "nein" ein: '
+            ).lower()
             if weitermachen == "ja":
                 try:
                     os.rename(file_path, newpath)
